@@ -3,6 +3,37 @@ import { Match } from './types';
 
 export const MOCK_MATCHES: Match[] = [
   {
+    id: 'live-clasico',
+    sport: 'football',
+    league: 'La Liga - Espagne',
+    homeTeam: {
+      name: 'Real Madrid',
+      logo: 'https://p7.hiclipart.com/preview/443/537/796/real-madrid-cf-uefa-champions-league-santiago-bernabeu-stadium-la-liga-football-real-madrid.jpg',
+      form: ['W', 'W', 'W', 'D', 'W'],
+      avgGoalsScored: 2.8,
+      avgGoalsConceded: 0.9
+    },
+    awayTeam: {
+      name: 'FC Barcelona',
+      logo: 'https://p7.hiclipart.com/preview/417/30/805/fc-barcelona-la-liga-football-sport-logo-barcelona.jpg',
+      form: ['W', 'W', 'L', 'W', 'W'],
+      avgGoalsScored: 2.5,
+      avgGoalsConceded: 1.1
+    },
+    date: new Date().toISOString(),
+    odds: { home: 2.10, draw: 3.50, away: 3.20 },
+    status: 'live',
+    h2h: 'Real 1-1 Barca (HT)',
+    aiProbability: 75,
+    liveStats: {
+      minute: 25,
+      possession: { home: 55, away: 45 },
+      shotsOnTarget: { home: 4, away: 2 },
+      dangerousAttacks: { home: 42, away: 31 },
+      corners: { home: 3, away: 1 }
+    }
+  },
+  {
     id: 'f1',
     sport: 'football',
     league: 'Ligue 1 - France',
@@ -24,68 +55,5 @@ export const MOCK_MATCHES: Match[] = [
     odds: { home: 1.45, draw: 4.80, away: 6.50 },
     status: 'upcoming',
     h2h: 'PSG 3-1 OM (Mars 2024)'
-  },
-  {
-    id: 'b1',
-    sport: 'basketball',
-    league: 'NBA - USA',
-    homeTeam: {
-      name: 'Boston Celtics',
-      logo: 'https://picsum.photos/seed/celtics/64/64',
-      form: ['W', 'W', 'W', 'L', 'W'],
-      avgGoalsScored: 120.5,
-      avgGoalsConceded: 109.2
-    },
-    awayTeam: {
-      name: 'Dallas Mavericks',
-      logo: 'https://picsum.photos/seed/mavs/64/64',
-      form: ['L', 'W', 'W', 'W', 'W'],
-      avgGoalsScored: 118.2,
-      avgGoalsConceded: 114.5
-    },
-    date: '2024-05-21T02:00:00Z',
-    odds: { home: 1.35, away: 3.20 },
-    status: 'upcoming',
-    h2h: 'Celtics 110-105 Mavs (Jan 2024)'
-  },
-  {
-    id: 'f2',
-    sport: 'football',
-    league: 'Premier League - Angleterre',
-    homeTeam: {
-      name: 'Man City',
-      logo: 'https://picsum.photos/seed/mcity/64/64',
-      form: ['W', 'W', 'W', 'W', 'W'],
-      avgGoalsScored: 2.8,
-      avgGoalsConceded: 0.7
-    },
-    awayTeam: {
-      name: 'Arsenal',
-      logo: 'https://picsum.photos/seed/arsenal/64/64',
-      form: ['W', 'W', 'D', 'W', 'W'],
-      avgGoalsScored: 2.5,
-      avgGoalsConceded: 0.6
-    },
-    date: '2024-05-21T18:00:00Z',
-    odds: { home: 1.85, draw: 3.75, away: 4.10 },
-    status: 'upcoming'
-  },
-  {
-    id: 'b2',
-    sport: 'basketball',
-    league: 'EuroLeague',
-    homeTeam: {
-      name: 'Real Madrid BK',
-      logo: 'https://picsum.photos/seed/realbk/64/64',
-      form: ['W', 'W', 'W', 'W', 'L']
-    },
-    awayTeam: {
-      name: 'Panathinaikos',
-      logo: 'https://picsum.photos/seed/pana/64/64',
-      form: ['W', 'L', 'W', 'W', 'W']
-    },
-    date: '2024-05-21T20:00:00Z',
-    odds: { home: 1.55, away: 2.45 },
-    status: 'upcoming'
   }
 ];
