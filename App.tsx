@@ -45,7 +45,7 @@ const App: React.FC = () => {
 
   const loadData = async (showLoader = true) => {
     if (showLoader) setLoading(true);
-    setLoadingStatus("Initialisation des flux...");
+    setLoadingStatus("Connexion satellite...");
     try {
       const { matches: data, source } = await fetchMatchesByDate(selectedDate, (status) => {
         setLoadingStatus(status);
@@ -53,23 +53,10 @@ const App: React.FC = () => {
       setMatches(data);
       setDataSource(source);
     } catch (e) {
-      console.error(e);
-      setLoadingStatus("Erreur de connexion.");
+      setLoadingStatus("Erreur de synchronisation.");
     } finally {
       if (showLoader) setLoading(false);
     }
-  };
-
-  const addToSlip = (match: Match) => {
-    if (betSlip.some(item => item.matchId === match.id)) return;
-    const newItem: BetSlipItem = {
-      matchId: match.id,
-      homeTeam: match.homeTeam.name,
-      awayTeam: match.awayTeam.name,
-      prediction: match.aiProbability! >= 70 ? (lang === 'fr' ? '1/X' : '1/X') : (lang === 'fr' ? 'BTTS' : 'BTTS'),
-      odds: match.odds.home
-    };
-    setBetSlip([...betSlip, newItem]);
   };
 
   const filteredMatches = useMemo(() => {
@@ -117,102 +104,67 @@ const App: React.FC = () => {
         <div className="p-10">
           <div className="flex items-center gap-4 mb-16">
             <div className="w-11 h-11 bg-[#8b5cf6] rounded-2xl flex items-center justify-center violet-glow">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" /></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight leading-none">PRONOS<span className="text-[#8b5cf6]">AI</span></h1>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`w-1.5 h-1.5 rounded-full ${dataSource === 'API' ? 'bg-emerald-500' : 'bg-[#8b5cf6]'}`}></span>
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{dataSource === 'API' ? 'Direct API' : 'Global AI Search'}</span>
+                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{dataSource === 'API' ? 'Official Feed' : 'AI Global Scan'}</span>
               </div>
             </div>
           </div>
-
           <nav className="space-y-2">
-            {[
-              { id: 'pronos', label: t.pronos, icon: <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" /> },
-              { id: 'live', label: t.live, icon: <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /> },
-              { id: 'analyses', label: t.analyses, icon: <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /> }
-            ].map(nav => (
-              <button
-                key={nav.id}
-                onClick={() => setActiveTab(nav.id)}
-                className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold text-sm ${activeTab === nav.id ? 'active-link' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
-              >
+            {[{ id: 'pronos', label: t.pronos, icon: <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" /> }].map(nav => (
+              <button key={nav.id} onClick={() => setActiveTab(nav.id)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold text-sm ${activeTab === nav.id ? 'active-link' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">{nav.icon}</svg>
                 {nav.label}
               </button>
             ))}
           </nav>
         </div>
-
-        <div className="mt-auto p-10 border-t border-white/5">
-          <button 
-            onClick={() => setLang(lang === 'fr' ? 'ar' : 'fr')}
-            className="w-full bg-[#0f0f12] text-zinc-500 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-[#8b5cf6] transition-colors"
-          >
-            {lang === 'fr' ? 'LANGUAGE: AR' : 'LANGUAGE: FR'}
-          </button>
-        </div>
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="px-10 py-8 flex items-center justify-between shrink-0 border-b border-white/5 bg-[#050507]/50 backdrop-blur-md">
-          <div className="flex items-center gap-8">
-            <h2 className="text-2xl font-black tracking-tight uppercase">{t[activeTab as keyof typeof t] || t.pronos}</h2>
-            <div className="relative w-72">
-              <input 
-                type="text" 
-                placeholder={t.search}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-[#0f0f12] border border-white/5 rounded-2xl px-12 py-3 text-sm focus:border-[#8b5cf6]/50 transition-all outline-none"
-              />
-              <svg className="h-4 w-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </div>
-          </div>
-
+        <header className="px-10 py-8 flex items-center justify-between shrink-0 border-b border-white/5">
+          <h2 className="text-2xl font-black uppercase">{t.pronos}</h2>
           <div className="flex items-center gap-4">
-             {dataSource === 'AI_SEARCH' && (
-                <div className="flex items-center gap-2 bg-[#8b5cf6]/10 px-4 py-2.5 rounded-2xl border border-[#8b5cf6]/20">
-                  <svg className="h-3 w-3 text-[#8b5cf6] animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.993 7.993 0 003 12c0 2.877 1.512 5.4 3.752 6.804A8 8 0 0110 20a8 8 0 01-6.248-3.196L3.752 16.804A7.993 7.993 0 009 4.804z"/></svg>
-                  <span className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-widest">IA GLOBAL SEARCH</span>
-                </div>
-             )}
-            <button onClick={() => loadData()} className="p-3 bg-[#0f0f12] rounded-2xl hover:text-[#8b5cf6] transition-colors border border-white/5">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <button onClick={() => loadData()} className="p-3 bg-[#0f0f12] rounded-2xl hover:text-[#8b5cf6] border border-white/5">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
-          <div className="flex gap-4 overflow-x-auto pb-8 no-scrollbar">
-            {calendarDays}
-          </div>
+          <div className="flex gap-4 overflow-x-auto pb-8 no-scrollbar">{calendarDays}</div>
 
           {loading ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 border-4 border-[#8b5cf6]/20 border-t-[#8b5cf6] rounded-full animate-spin"></div>
-                <div className="mt-8 flex flex-col items-center gap-2 text-center">
-                   <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] animate-pulse">{loadingStatus}</p>
-                   <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest max-w-[200px]">Synchronisation avec les flux de données temps réel</p>
-                </div>
-              </div>
+            <div className="h-full flex flex-col items-center justify-center">
+              <div className="w-16 h-16 border-4 border-[#8b5cf6]/20 border-t-[#8b5cf6] rounded-full animate-spin"></div>
+              <p className="mt-8 text-[11px] font-black uppercase tracking-[0.3em]">{loadingStatus}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-              {filteredMatches.length > 0 ? filteredMatches.map(match => (
-                <MatchCard key={match.id} match={match} onSelect={setSelectedMatch} onAddToSlip={addToSlip} lang={lang} />
-              )) : (
-                <div className="col-span-full py-20 text-center">
-                  <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6 text-zinc-800">
-                    <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <>
+              {filteredMatches.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
+                  {filteredMatches.map(match => <MatchCard key={match.id} match={match} onSelect={setSelectedMatch} lang={lang} />)}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mb-6">
+                    <svg className="h-10 w-10 text-zinc-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                   </div>
-                  <p className="text-zinc-600 font-black uppercase tracking-widest text-xs">Aucun match détecté même après recherche approfondie.</p>
+                  <h3 className="text-white font-black uppercase tracking-widest mb-4">Aucun match détecté par l'API</h3>
+                  <p className="text-zinc-500 text-sm max-w-xs mb-8">Les championnats majeurs sont peut-être à l'arrêt. Veux-tu forcer une recherche IA approfondie ?</p>
+                  <button 
+                    onClick={() => loadData()}
+                    className="px-8 py-4 bg-[#8b5cf6] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#7c3aed] transition-all shadow-lg shadow-purple-500/20"
+                  >
+                    Scanner le Web (IA)
+                  </button>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </main>

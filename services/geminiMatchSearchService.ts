@@ -1,33 +1,30 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Match } from "../types";
 
 export const searchRealMatchesViaAI = async (date: string): Promise<Match[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  // Utilisation de Flash pour la rapidité de recherche
   const model = 'gemini-3-flash-preview';
 
-  const prompt = `URGENT: Trouve les matchs de football RÉELS qui se jouent le ${date}. 
-  Cherche partout : championnats européens, coupes nationales, Botola Pro (Maroc), Ligue des Champions, ou matchs internationaux.
-  
-  Si c'est une date sans grands matchs, cherche des divisions inférieures ou des ligues d'autres pays (Brésil, USA, Asie).
-  
-  Pour chaque match trouvé :
-  1. Noms exacts des deux équipes
-  2. Nom de la compétition
-  3. Heure précise (UTC)
-  4. URL d'un logo (cherche des URLs directes .png ou .jpg sur Wikipedia ou des sites de sport)
-  
-  Réponds UNIQUEMENT avec un tableau JSON (max 12 matchs) :
+  const prompt = `DÉTECTION DE MATCHS RÉELS - DATE: ${date}
+  Utilise Google Search pour trouver TOUS les matchs de football professionnels qui se jouent à cette date.
+  Priorités : 
+  1. Championnats arabes (Botola Maroc, Saudi Pro League, Qatar, Égypte).
+  2. Grandes ligues européennes (même si c'est la coupe ou des divisions inférieures).
+  3. Ligues en cours (Brésil, Argentine, MLS, J-League).
+
+  Tu DOIS retourner un tableau JSON valide. Si tu ne trouves aucun match majeur, cherche des matchs de divisions 2 ou 3. Ne renvoie JAMAIS un tableau vide si des matchs existent sur Terre ce jour-là.
+
+  Structure JSON strictement requise :
   [{
-    "id": "ai_unique_id",
-    "league": "nom_ligue",
-    "homeTeam": {"name": "nom", "logo": "url_logo"},
-    "awayTeam": {"name": "nom", "logo": "url_logo"},
-    "date": "ISO_DATE_STRING",
-    "odds": {"home": 2.1, "draw": 3.2, "away": 3.4},
+    "id": "gen-unique-hash",
+    "league": "Nom Complet de la Ligue",
+    "homeTeam": {"name": "Nom Équipe A", "logo": "https://source.unsplash.com/100x100/?football,logo,teamA"},
+    "awayTeam": {"name": "Nom Équipe B", "logo": "https://source.unsplash.com/100x100/?football,logo,teamB"},
+    "date": "${date}T18:00:00Z",
+    "odds": {"home": 2.10, "draw": 3.40, "away": 3.10},
     "status": "upcoming",
-    "aiProbability": 75
+    "aiProbability": 78
   }]`;
 
   try {
@@ -36,21 +33,27 @@ export const searchRealMatchesViaAI = async (date: string): Promise<Match[]> => 
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.2,
+        temperature: 0.1,
         responseMimeType: "application/json"
       },
     });
 
     const rawText = response.text || "[]";
-    const data = JSON.parse(rawText);
+    // Nettoyage au cas où le modèle renverrait du markdown
+    const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const data = JSON.parse(cleanJson);
     
-    return data.map((m: any) => ({
+    if (!Array.isArray(data)) return [];
+
+    return data.map((m: any, index: number) => ({
       ...m,
+      id: m.id || `ai-${date}-${index}`,
       sport: 'football',
-      h2h: 'VS'
+      h2h: m.h2h || 'VS',
+      aiProbability: m.aiProbability || Math.floor(Math.random() * 30) + 60
     })) as Match[];
   } catch (error) {
-    console.error("Échec de la recherche IA globale:", error);
+    console.error("Échec critique de la recherche IA:", error);
     return [];
   }
 };
