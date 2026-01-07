@@ -1,0 +1,7 @@
+{
+  "name": "Copy of PronosAI - Expert Sport Predictor",
+  "description": "Une plateforme de pronostics sportifs de haute précision alimentée par l'IA Gemini pour analyser les statistiques, les formes actuelles et les probabilités de victoire.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
