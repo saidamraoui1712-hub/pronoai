@@ -9,12 +9,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <!-- Script API-SPORTS Widgets -->
+    <script type="module" src="https://widgets.api-sports.io/3.1.0/widgets.js"></script>
     <style>
         :root {
             --bg: #050507;
             --card: #0c0c0e;
-            --accent: #8b5cf6;
-            --accent-glow: rgba(139, 92, 246, 0.15);
+            --accent: #06b6d4; /* Cyan pour correspondre à la V2 */
+            --accent-glow: rgba(6, 182, 212, 0.15);
         }
         
         body {
@@ -28,6 +30,22 @@
 
         .mono { font-family: 'JetBrains+Mono', monospace; }
         
+        /* Personnalisation du Widget API-SPORTS pour le thème PronosAI */
+        api-sports-widget[data-theme="PronosAI"] {
+          --primary-color: #06b6d4;
+          --success-color: #10b981;
+          --warning-color: #f59e0b;
+          --danger-color: #ef4444;
+          --background-color: #0c0c0e;
+          --text-color: #ececed;
+          --text-color-info: #94a3b8;
+          --border: 1px solid rgba(255, 255, 255, 0.05);
+          --hover: rgba(6, 182, 212, 0.1);
+          --title-text-transform: uppercase;
+          --header-text-transform: uppercase;
+          --primary-font-size: 0.85rem;
+        }
+
         .glass-sidebar {
             background: rgba(12, 12, 14, 0.8);
             backdrop-filter: blur(30px);
@@ -41,14 +59,14 @@
         }
 
         .card-ghost:hover {
-            border-color: rgba(139, 92, 246, 0.3);
+            border-color: rgba(6, 182, 212, 0.3);
             background: #111114;
             transform: translateY(-2px);
             box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
         }
 
         .active-link {
-            background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), transparent);
+            background: linear-gradient(90deg, rgba(6, 182, 212, 0.1), transparent);
             color: var(--accent);
             border-right: 2px solid var(--accent);
         }
@@ -62,10 +80,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade { animation: fadeIn 0.5s ease-out forwards; }
-
-        .violet-glow {
-            box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
-        }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>

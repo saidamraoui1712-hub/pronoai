@@ -5,11 +5,13 @@ import { fetchRealMatches } from './services/matchService';
 import { analyzeMatch } from './services/analysisService';
 import { Login } from './components/Login';
 import { MatchCard } from './components/MatchCard';
+import { SportsWidget } from './components/SportsWidget';
 import { translations } from './services/translations';
 
 const App: React.FC = () => {
   const [isAuth, setIsAuth] = useState(false);
   const [lang, setLang] = useState<'fr' | 'ar'>('fr');
+  const [activeTab, setActiveTab] = useState<'pronos' | 'leagues'>('pronos');
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -18,6 +20,7 @@ const App: React.FC = () => {
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
 
   const t = translations[lang];
+  const API_SPORTS_KEY = "ffcbec0556b632dfa240569116630df0";
 
   useEffect(() => {
     const auth = sessionStorage.getItem('is_auth');
@@ -71,11 +74,28 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#050507] text-[#ececed] selection:bg-cyan-500/30">
       {/* Top Navbar */}
       <header className="h-20 border-b border-white/5 bg-[#050507]/80 backdrop-blur-xl sticky top-0 z-50 px-6 lg:px-12 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-cyan-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)]">
-            <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('pronos')}>
+            <div className="w-10 h-10 bg-cyan-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+              <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h1 className="text-2xl font-black italic tracking-tighter">PRONOS<span className="text-cyan-500">AI</span></h1>
           </div>
-          <h1 className="text-2xl font-black italic tracking-tighter">PRONOS<span className="text-cyan-500">AI</span></h1>
+
+          <nav className="hidden md:flex items-center gap-2">
+            <button 
+              onClick={() => setActiveTab('pronos')}
+              className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'pronos' ? 'bg-cyan-500 text-black' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+            >
+              {t.pronos}
+            </button>
+            <button 
+              onClick={() => setActiveTab('leagues')}
+              className={`px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'leagues' ? 'bg-cyan-500 text-black' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+            >
+              {t.leagues}
+            </button>
+          </nav>
         </div>
 
         <div className="flex items-center gap-6">
@@ -85,7 +105,7 @@ const App: React.FC = () => {
           <div className="h-6 w-px bg-white/5"></div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
             <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-            <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest">Quantum Engine v2</span>
+            <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest">Quantum Engine v2.1</span>
           </div>
         </div>
       </header>
@@ -93,48 +113,77 @@ const App: React.FC = () => {
       <div className="flex lg:flex-row flex-col">
         {/* Main Content */}
         <main className="flex-1 p-6 lg:p-12">
-          {/* Calendar Picker */}
-          <div className="flex gap-4 overflow-x-auto pb-8 no-scrollbar">
-            {[0, 1, 2, 3, 4, 5, 6].map(offset => {
-              const d = new Date();
-              d.setDate(d.getDate() + offset);
-              const iso = d.toISOString().split('T')[0];
-              return (
-                <button
-                  key={iso}
-                  onClick={() => handleDateChange(iso)}
-                  className={`flex flex-col items-center min-w-[80px] py-4 rounded-2xl transition-all ${selectedDate === iso ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20 scale-105' : 'bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10'}`}
-                >
-                  <span className="text-[10px] font-black uppercase mb-1">{d.toLocaleDateString(lang, { weekday: 'short' })}</span>
-                  <span className="text-xl font-black">{d.getDate()}</span>
-                </button>
-              );
-            })}
-          </div>
+          
+          {activeTab === 'pronos' ? (
+            <>
+              {/* Calendar Picker */}
+              <div className="flex gap-4 overflow-x-auto pb-8 no-scrollbar">
+                {[0, 1, 2, 3, 4, 5, 6].map(offset => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + offset);
+                  const iso = d.toISOString().split('T')[0];
+                  return (
+                    <button
+                      key={iso}
+                      onClick={() => handleDateChange(iso)}
+                      className={`flex flex-col items-center min-w-[80px] py-4 rounded-2xl transition-all ${selectedDate === iso ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20 scale-105' : 'bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10'}`}
+                    >
+                      <span className="text-[10px] font-black uppercase mb-1">{d.toLocaleDateString(lang, { weekday: 'short' })}</span>
+                      <span className="text-xl font-black">{d.getDate()}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-          {loading ? (
-            <div className="h-96 flex flex-col items-center justify-center">
-              <div className="w-16 h-16 border-t-2 border-cyan-500 rounded-full animate-spin"></div>
-              <p className="mt-6 text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em] animate-pulse">Scanning Global Feeds...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-              {matches.length > 0 ? matches.map(match => (
-                <MatchCard 
-                  key={match.id} 
-                  match={match} 
-                  onAnalyze={() => handleAnalyze(match)}
-                  onAdd={(p, o) => addToSlip(match, p, o)}
-                  isAnalyzing={analyzingId === match.id}
-                  lang={lang}
-                />
-              )) : (
-                <div className="col-span-full py-20 text-center">
-                  <div className="text-zinc-800 text-6xl mb-6">∅</div>
-                  <h3 className="text-white font-black uppercase tracking-widest text-lg">Walo Match</h3>
-                  <p className="text-zinc-600 text-xs mt-2 uppercase font-bold">Aucun événement détecté pour cette date.</p>
+              {loading ? (
+                <div className="h-96 flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 border-t-2 border-cyan-500 rounded-full animate-spin"></div>
+                  <p className="mt-6 text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em] animate-pulse">Scanning Global Feeds...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+                  {matches.length > 0 ? matches.map(match => (
+                    <MatchCard 
+                      key={match.id} 
+                      match={match} 
+                      onAnalyze={() => handleAnalyze(match)}
+                      onAdd={(p, o) => addToSlip(match, p, o)}
+                      isAnalyzing={analyzingId === match.id}
+                      lang={lang}
+                    />
+                  )) : (
+                    <div className="col-span-full py-20 text-center">
+                      <div className="text-zinc-800 text-6xl mb-6">∅</div>
+                      <h3 className="text-white font-black uppercase tracking-widest text-lg">Walo Match</h3>
+                      <p className="text-zinc-600 text-xs mt-2 uppercase font-bold">Aucun événement détecté pour cette date.</p>
+                    </div>
+                  )}
                 </div>
               )}
+            </>
+          ) : (
+            <div className="space-y-12">
+               <div className="flex flex-col gap-2 mb-8">
+                  <h2 className="text-3xl font-black uppercase italic tracking-tighter">Exploration Mondiale</h2>
+                  <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Naviguez parmi toutes les ligues via les données officielles API-SPORTS</p>
+               </div>
+               
+               <div className="grid grid-cols-1 gap-12">
+                  <SportsWidget 
+                    type="leagues" 
+                    apiKey={API_SPORTS_KEY} 
+                    lang={lang}
+                  />
+                  
+                  <div className="mt-8">
+                    <h3 className="text-xs font-black text-zinc-600 uppercase tracking-widest mb-6">Matchs en Direct (Global)</h3>
+                    <SportsWidget 
+                      type="games" 
+                      apiKey={API_SPORTS_KEY} 
+                      lang={lang}
+                    />
+                  </div>
+               </div>
             </div>
           )}
         </main>
