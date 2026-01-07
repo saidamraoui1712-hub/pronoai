@@ -33,7 +33,7 @@ export interface Match {
   status: 'upcoming' | 'live' | 'finished';
   h2h?: string;
   aiProbability?: number; 
-  liveStats?: LiveStats; // Nouvelles stats pour le direct
+  liveStats?: LiveStats;
 }
 
 export interface GroundingSource {
@@ -41,29 +41,22 @@ export interface GroundingSource {
   uri: string;
 }
 
-export interface LiveInsight {
-  minute: number;
-  message: string;
-  prediction: 'Goal_Soon_Home' | 'Goal_Soon_Away' | 'Stability' | 'Under_Alert' | 'Over_Alert';
-  intensity: number; // 0-100
-}
-
 export interface AIAnalysis {
   matchId: string;
+  modelUsed: string;
   winProbabilities: {
     home: number;
     draw: number;
     away: number;
   };
   expectedScore: string;
+  geminiPerspective: string;
+  chatGptPerspective: string;
   keyInsights: string[];
   riskLevel: string;
   suggestedBet: string;
   confidenceScore: number; 
-  absentPlayers: string[];
-  weatherImpact?: string;
   sources?: GroundingSource[];
-  liveInsights?: LiveInsight[]; // Historique des prédictions live
 }
 
 export interface BetSlipItem {
@@ -72,10 +65,4 @@ export interface BetSlipItem {
   awayTeam: string;
   prediction: string;
   odds: number;
-}
-
-export interface UserNote {
-  matchId: string;
-  note: string;
-  updatedAt: string;
 }

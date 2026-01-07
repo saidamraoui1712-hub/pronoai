@@ -3,85 +3,88 @@ import { GoogleGenAI } from "@google/genai";
 import { Match, AIAnalysis, GroundingSource } from "../types";
 
 export const getMatchAnalysis = async (match: Match): Promise<AIAnalysis> => {
-  // Initialisation à chaque appel pour garantir l'utilisation de la clé la plus récente
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const isLive = match.status === 'live' && match.liveStats;
+  const systemInstruction = `Tu es une IA hybride combinant les capacités de raisonnement de Gemini 3 Pro et la finesse stratégique de ChatGPT.
+  Ta mission est de fournir deux analyses distinctes pour un match de football :
+  1. La perspective "Gemini" : Focus sur les données brutes, les statistiques et le momentum.
+  2. La perspective "ChatGPT Style" : Focus sur la psychologie du match, les enjeux tactiques et une vision globale.
   
-  // Utilisation de gemini-3-pro-preview pour les tâches complexes d'analyse
-  const modelName = 'gemini-3-pro-preview';
+  RÈGLES :
+  - Réponds UNIQUEMENT en JSON.
+  - Langue : Français.
+  - Sois très précis sur les scores probables.`;
 
-  const systemInstruction = `Tu es un expert mondial en analyse de football et en data-journalisme sportif.
-  Ta mission est de fournir une analyse prédictive ultra-précise basée sur les statistiques actuelles, l'historique H2H et le momentum du match.
+  const prompt = `Analyse le match : ${match.homeTeam.name} vs ${match.awayTeam.name} (${match.league}).
+  Cotes : 1:${match.odds.home} | N:${match.odds.draw} | 2:${match.odds.away}.
   
-  RÈGLES CRITIQUES :
-  1. Réponds UNIQUEMENT avec un objet JSON valide.
-  2. N'ajoute AUCUN texte avant ou après le JSON.
-  3. Si le match est en LIVE, analyse spécifiquement les probabilités de "Prochain But" et "Over/Under" en fonction des tirs et de la possession.
-  4. Langue de réponse : Français.`;
-
-  const prompt = `Analyse le match suivant :
-  LIGUE: ${match.league}
-  EQUIPES: ${match.homeTeam.name} vs ${match.awayTeam.name}
-  STATUS: ${match.status} ${isLive ? `(Minute: ${match.liveStats?.minute})` : ''}
-  COTES: Home ${match.odds.home}, Draw ${match.odds.draw}, Away ${match.odds.away}
-  ${isLive ? `STATS LIVE: Possession ${match.liveStats?.possession.home}%-${match.liveStats?.possession.away}%, Tirs ${match.liveStats?.shotsOnTarget.home}-${match.liveStats?.shotsOnTarget.away}` : `HISTORIQUE: ${match.h2h}`}
-
-  Génère une réponse suivant EXACTEMENT ce schéma :
+  Format de réponse JSON attendu :
   {
-    "winProbabilities": {"home": number, "draw": number, "away": number},
-    "expectedScore": "string",
-    "keyInsights": ["string", "string", "string"],
+    "winProbabilities": {"home": 45, "draw": 25, "away": 30},
+    "expectedScore": "2-1",
+    "geminiPerspective": "Analyse technique détaillée ici...",
+    "chatGptPerspective": "Analyse stratégique globale ici...",
+    "keyInsights": ["Point tactique 1", "Point tactique 2"],
     "riskLevel": "Bas | Moyen | Haut",
-    "suggestedBet": "string",
-    "confidenceScore": number,
-    "absentPlayers": ["string"],
-    "liveInsights": [{"minute": number, "message": "string", "prediction": "Goal_Soon_Home | Goal_Soon_Away | Stability | Under_Alert | Over_Alert", "intensity": number}]
+    "suggestedBet": "Le conseil de pari",
+    "confidenceScore": 85
   }`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction,
-        tools: [{ googleSearch: {} }],
-        temperature: 0.2, // Faible température pour plus de consistance
-        responseMimeType: "application/json"
-      },
-    });
+  const tryGenerate = async (modelName: string): Promise<AIAnalysis | null> => {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction,
+          tools: [{ googleSearch: {} }],
+          temperature: 0.3,
+          responseMimeType: "application/json"
+        },
+      });
 
-    const rawText = response.text || "{}";
-    
-    // Nettoyage du texte pour extraire le JSON proprement (au cas où le modèle ajoute des balises ```json)
-    const jsonString = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const result = JSON.parse(jsonString);
-    
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    const sources: GroundingSource[] = groundingChunks?.map((chunk: any) => ({
-      title: chunk.web?.title || "Analyse Web",
-      uri: chunk.web?.uri || "#"
-    })).filter((s: any) => s.uri !== "#") || [];
+      const rawText = response.text || "{}";
+      const jsonString = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const result = JSON.parse(jsonString);
+      
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      const sources: GroundingSource[] = groundingChunks?.map((chunk: any) => ({
+        title: chunk.web?.title || "Source Web",
+        uri: chunk.web?.uri || "#"
+      })).filter((s: any) => s.uri !== "#") || [];
 
-    return { 
-      ...result, 
-      matchId: match.id,
-      sources 
-    } as AIAnalysis;
-  } catch (e) {
-    console.error("AI Analysis Failed:", e);
-    // Fallback structuré pour ne pas casser l'interface
-    return {
-      matchId: match.id,
-      winProbabilities: { home: 33, draw: 34, away: 33 },
-      expectedScore: "N/A",
-      keyInsights: ["L'IA est actuellement surchargée ou en maintenance.", "Veuillez réessayer dans quelques instants."],
-      riskLevel: "Indéterminé",
-      suggestedBet: "Attendre confirmation",
-      confidenceScore: 0,
-      absentPlayers: [],
-      sources: [],
-      liveInsights: []
-    };
+      return { 
+        ...result, 
+        matchId: match.id,
+        modelUsed: modelName,
+        sources 
+      } as AIAnalysis;
+    } catch (e) {
+      console.warn(`Modèle ${modelName} a échoué, tentative de fallback...`, e);
+      return null;
+    }
+  };
+
+  // 1. Essayer avec Gemini 3 Pro
+  let analysis = await tryGenerate('gemini-3-pro-preview');
+  
+  // 2. Si échec, fallback sur Gemini 3 Flash
+  if (!analysis) {
+    analysis = await tryGenerate('gemini-3-flash-preview');
   }
+
+  // 3. Fallback ultime si tout échoue
+  return analysis || {
+    matchId: match.id,
+    modelUsed: 'Fallback Error',
+    winProbabilities: { home: 33, draw: 34, away: 33 },
+    expectedScore: "N/A",
+    geminiPerspective: "Erreur de connexion aux serveurs de haute performance.",
+    chatGptPerspective: "Impossible de générer la comparaison pour le moment.",
+    keyInsights: ["Problème de quota API ou maintenance."],
+    riskLevel: "Indéterminé",
+    suggestedBet: "Attendre le rétablissement du service",
+    confidenceScore: 0,
+    sources: []
+  };
 };
