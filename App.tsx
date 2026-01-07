@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [search, setSearch] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isRealData, setIsRealData] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeLeague, setActiveLeague] = useState<string>('all');
@@ -35,16 +36,27 @@ const App: React.FC = () => {
     }
   }, [isAuthenticated, lang, selectedDate]);
 
-  const loadData = async () => {
-    setLoading(true);
+  // Rafraîchissement automatique pour le LIVE
+  useEffect(() => {
+    if (activeTab === 'live' && isAuthenticated) {
+      const interval = setInterval(() => {
+        loadData(false); // Silent refresh
+      }, 60000); // Toutes les minutes
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, isAuthenticated]);
+
+  const loadData = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
-      const data = await fetchMatchesByDate(selectedDate);
+      const { matches: data, isReal } = await fetchMatchesByDate(selectedDate);
       setMatches(data);
-      setLastUpdated(new Date().toLocaleTimeString());
+      setIsRealData(isReal);
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -94,7 +106,7 @@ const App: React.FC = () => {
       });
     }
 
-    return result.sort((a, b) => (b.aiProbability || 0) - (a.aiProbability || 0));
+    return result;
   }, [matches, search, activeLeague, activeTab]);
 
   const uniqueLeagues = useMemo(() => Array.from(new Set(matches.map(m => m.league))).sort(), [matches]);
@@ -110,10 +122,10 @@ const App: React.FC = () => {
         <button 
           key={iso}
           onClick={() => setSelectedDate(iso)}
-          className={`flex flex-col items-center min-w-[70px] py-3 rounded-xl border transition-all active:scale-95 ${selectedDate === iso ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-900/40' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300'}`}
+          className={`flex flex-col items-center min-w-[65px] py-2.5 rounded-xl border transition-all active:scale-95 ${selectedDate === iso ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:text-slate-300'}`}
         >
-          <span className="text-[8px] font-black uppercase mb-0.5">{d.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'ar-MA', { weekday: 'short' })}</span>
-          <span className="text-base font-black tracking-tighter">{d.getDate()}</span>
+          <span className="text-[7px] font-black uppercase mb-0.5">{d.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'ar-MA', { weekday: 'short' })}</span>
+          <span className="text-sm font-black tracking-tighter">{d.getDate()}</span>
         </button>
       );
     }
@@ -133,7 +145,7 @@ const App: React.FC = () => {
             </div>
             <div>
               <h1 className="text-lg font-black text-white tracking-tighter leading-none">PRONOS<span className="text-blue-500">AI</span></h1>
-              <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-1 block">Quantum v3.0</span>
+              <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-1 block">Quantum v3.2</span>
             </div>
           </div>
 
@@ -173,16 +185,17 @@ const App: React.FC = () => {
           <div className="flex items-center gap-4 w-full md:w-auto">
             <h2 className="text-xl font-black text-white uppercase tracking-tighter">{t[activeTab as keyof typeof t] || t.pronos}</h2>
             <div className="flex flex-col">
-               <div className="flex items-center gap-2 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
-                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)]"></span>
-                 <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{t.sync}</span>
+               <div className={`flex items-center gap-2 ${isRealData ? 'bg-blue-500/10 border-blue-500/20' : 'bg-orange-500/10 border-orange-500/20'} px-3 py-1 rounded-full border`}>
+                 <span className={`w-1.5 h-1.5 ${isRealData ? 'bg-blue-500' : 'bg-orange-500'} rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)]`}></span>
+                 <span className={`text-[9px] font-black ${isRealData ? 'text-blue-400' : 'text-orange-400'} uppercase tracking-widest`}>{isRealData ? 'LIVE FEED' : 'SIMULATION'}</span>
                </div>
+               {lastUpdated && <span className="text-[8px] text-slate-600 font-bold mt-1">MÀJ: {lastUpdated}</span>}
             </div>
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
             <button 
-              onClick={loadData}
+              onClick={() => loadData()}
               className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-500 hover:text-blue-400 hover:border-blue-500/30 transition-all active:rotate-180 duration-500"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -225,22 +238,33 @@ const App: React.FC = () => {
               <p className="mt-6 text-[9px] font-black text-blue-500 uppercase tracking-widest animate-pulse">{t.fetching}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 pb-12">
-              {filteredMatches.map(match => (
-                <MatchCard 
-                  key={match.id} 
-                  match={match} 
-                  onSelect={setSelectedMatch} 
-                  onAddToSlip={addToSlip} 
-                  lang={lang} 
-                />
-              ))}
-              {filteredMatches.length === 0 && (
-                <div className="col-span-full py-32 flex flex-col items-center justify-center border border-dashed border-slate-800/40 rounded-3xl">
-                   <p className="text-slate-600 font-black text-[10px] uppercase tracking-widest">{t.no_data}</p>
+            <>
+              {!isRealData && activeTab !== 'live' && (
+                <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center gap-3">
+                   <svg className="h-5 w-5 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                   <p className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">
+                     {lang === 'fr' ? "Impossible de synchroniser les matchs réels (clé API limitée). Affichage des données de simulation." : "تعذر مزامنة المباريات الحقيقية (مفتاح API محدود). عرض بيانات المحاكاة."}
+                   </p>
                 </div>
               )}
-            </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 pb-12">
+                {filteredMatches.map(match => (
+                  <MatchCard 
+                    key={match.id} 
+                    match={match} 
+                    onSelect={setSelectedMatch} 
+                    onAddToSlip={addToSlip} 
+                    lang={lang} 
+                  />
+                ))}
+                {filteredMatches.length === 0 && (
+                  <div className="col-span-full py-32 flex flex-col items-center justify-center border border-dashed border-slate-800/40 rounded-3xl">
+                     <p className="text-slate-600 font-black text-[10px] uppercase tracking-widest">{t.no_data}</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
 
