@@ -54,7 +54,7 @@ const App: React.FC = () => {
       setDataSource(source);
     } catch (e) {
       console.error(e);
-      setLoadingStatus("Erreur fatale système.");
+      setLoadingStatus("Erreur de connexion.");
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -113,7 +113,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#050507] text-[#ececed]">
-      {/* Sidebar */}
       <aside className="hidden lg:flex w-72 glass-sidebar flex-col sticky top-0 h-screen z-50">
         <div className="p-10">
           <div className="flex items-center gap-4 mb-16">
@@ -123,8 +122,8 @@ const App: React.FC = () => {
             <div>
               <h1 className="text-xl font-black tracking-tight leading-none">PRONOS<span className="text-[#8b5cf6]">AI</span></h1>
               <div className="flex items-center gap-2 mt-2">
-                <span className={`w-1.5 h-1.5 rounded-full ${dataSource === 'API' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{dataSource === 'API' ? 'Live API Feed' : 'AI Synthetic Search'}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${dataSource === 'API' ? 'bg-emerald-500' : 'bg-[#8b5cf6]'}`}></span>
+                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{dataSource === 'API' ? 'Direct API' : 'Global AI Search'}</span>
               </div>
             </div>
           </div>
@@ -157,7 +156,6 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Container */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="px-10 py-8 flex items-center justify-between shrink-0 border-b border-white/5 bg-[#050507]/50 backdrop-blur-md">
           <div className="flex items-center gap-8">
@@ -178,7 +176,7 @@ const App: React.FC = () => {
              {dataSource === 'AI_SEARCH' && (
                 <div className="flex items-center gap-2 bg-[#8b5cf6]/10 px-4 py-2.5 rounded-2xl border border-[#8b5cf6]/20">
                   <svg className="h-3 w-3 text-[#8b5cf6] animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.993 7.993 0 003 12c0 2.877 1.512 5.4 3.752 6.804A8 8 0 0110 20a8 8 0 01-6.248-3.196L3.752 16.804A7.993 7.993 0 009 4.804z"/></svg>
-                  <span className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-widest">AI SEARCH ACTIVE</span>
+                  <span className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-widest">IA GLOBAL SEARCH</span>
                 </div>
              )}
             <button onClick={() => loadData()} className="p-3 bg-[#0f0f12] rounded-2xl hover:text-[#8b5cf6] transition-colors border border-white/5">
@@ -196,9 +194,9 @@ const App: React.FC = () => {
             <div className="h-full flex items-center justify-center">
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 border-4 border-[#8b5cf6]/20 border-t-[#8b5cf6] rounded-full animate-spin"></div>
-                <div className="mt-8 flex flex-col items-center gap-2">
-                   <p className="text-[11px] font-black text-white uppercase tracking-[0.3em] animate-pulse">{loadingStatus}</p>
-                   <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Protocol Intelligence Terminal v2.5</p>
+                <div className="mt-8 flex flex-col items-center gap-2 text-center">
+                   <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] animate-pulse">{loadingStatus}</p>
+                   <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest max-w-[200px]">Synchronisation avec les flux de données temps réel</p>
                 </div>
               </div>
             </div>
@@ -211,7 +209,7 @@ const App: React.FC = () => {
                   <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6 text-zinc-800">
                     <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                   </div>
-                  <p className="text-zinc-600 font-black uppercase tracking-widest text-xs">Aucun match détecté pour cette période.</p>
+                  <p className="text-zinc-600 font-black uppercase tracking-widest text-xs">Aucun match détecté même après recherche approfondie.</p>
                 </div>
               )}
             </div>

@@ -2,7 +2,6 @@
 import { Match, LiveStats } from '../types';
 import { searchRealMatchesViaAI } from './geminiMatchSearchService';
 
-// Utilisation du nouveau token et de la configuration Football-Data.org
 const FOOTBALL_DATA_API_KEY = process.env.FOOTBALL_API_KEY || "e6ab5f98ee6742bbba9bd7425af2d10d"; 
 const BASE_URL = "https://api.football-data.org/v4";
 
@@ -24,7 +23,6 @@ const transformApiFixture = (match: any): Match => {
   
   let liveStats: LiveStats | undefined;
   if (status === 'live') {
-    // Football-data.org free tier simule des stats de base
     liveStats = {
       possession: { home: 50, away: 50 },
       shotsOnTarget: { home: 0, away: 0 },
@@ -54,7 +52,6 @@ const transformApiFixture = (match: any): Match => {
     },
     date: match.utcDate,
     odds: {
-      // Génération d'odds réalistes car l'API gratuite n'en fournit pas toujours
       home: Number((1.6 + Math.random() * 2).toFixed(2)),
       draw: Number((3.1 + Math.random() * 1.5).toFixed(2)),
       away: Number((2.4 + Math.random() * 3).toFixed(2))
@@ -70,7 +67,7 @@ export const fetchMatchesByDate = async (date: string, onStatusUpdate?: (status:
   try {
     const formattedDate = new Date(date).toISOString().split('T')[0];
     
-    if (onStatusUpdate) onStatusUpdate("Terminal: Accès Football-Data.org...");
+    if (onStatusUpdate) onStatusUpdate("Vérification des serveurs officiels...");
     
     const response = await fetch(`${BASE_URL}/matches?dateFrom=${formattedDate}&dateTo=${formattedDate}`, {
       method: 'GET',
@@ -80,35 +77,31 @@ export const fetchMatchesByDate = async (date: string, onStatusUpdate?: (status:
     });
     
     if (!response.ok) {
-      if (response.status === 429) throw new Error("API_RATE_LIMIT");
-      throw new Error(`HTTP Error: ${response.status}`);
+      console.warn(`API Official Error: ${response.status}`);
+      throw new Error("OFFICIAL_API_UNAVAILABLE");
     }
 
     const data = await response.json();
     
     if (data.matches && data.matches.length > 0) {
-      console.log(`API Succès: ${data.matches.length} matchs détectés.`);
-      if (onStatusUpdate) onStatusUpdate("Données officielles chargées.");
-      
+      if (onStatusUpdate) onStatusUpdate("Données officielles détectées...");
       const transformed = data.matches.map(transformApiFixture);
-      const sorted = transformed.sort((a: Match, b: Match) => {
-        if (a.status === 'live' && b.status !== 'live') return -1;
-        if (a.status !== 'live' && b.status === 'live') return 1;
-        return 0;
-      });
-      
-      return { matches: sorted, source: 'API' };
+      return { matches: transformed, source: 'API' };
     }
 
-    if (onStatusUpdate) onStatusUpdate("Aucun match officiel aujourd'hui. Recherche IA...");
+    // Si 0 match, on passe direct à l'IA avec un message clair
+    if (onStatusUpdate) onStatusUpdate("Lancement de la recherche globale IA...");
     const aiMatches = await searchRealMatchesViaAI(date);
-    return { matches: aiMatches, source: aiMatches.length > 0 ? 'AI_SEARCH' : 'MOCK' };
+    
+    if (aiMatches.length > 0) {
+      return { matches: aiMatches, source: 'AI_SEARCH' };
+    }
+    
+    return { matches: [], source: 'MOCK' };
 
   } catch (error: any) {
-    console.error("Erreur API Football-Data:", error);
-    const msg = error.message === "API_RATE_LIMIT" ? "Quota atteint. Passage en mode IA..." : "Erreur serveur. Passage en mode IA...";
-    if (onStatusUpdate) onStatusUpdate(msg);
-    
+    console.error("Erreur API, basculement IA:", error);
+    if (onStatusUpdate) onStatusUpdate("Connexion IA de secours...");
     const aiMatches = await searchRealMatchesViaAI(date);
     return { matches: aiMatches, source: aiMatches.length > 0 ? 'AI_SEARCH' : 'MOCK' };
   }

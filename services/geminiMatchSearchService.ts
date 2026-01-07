@@ -4,27 +4,30 @@ import { Match } from "../types";
 
 export const searchRealMatchesViaAI = async (date: string): Promise<Match[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const model = 'gemini-3-pro-preview';
+  // Utilisation de Flash pour la rapidité de recherche
+  const model = 'gemini-3-flash-preview';
 
-  const prompt = `Trouve les 10 matchs de football les plus importants qui ont lieu le ${date}. 
-  Inclus les ligues majeures (Ligue 1, Premier League, La Liga, Serie A, Bundesliga, Champions League ou Botola Pro).
+  const prompt = `URGENT: Trouve les matchs de football RÉELS qui se jouent le ${date}. 
+  Cherche partout : championnats européens, coupes nationales, Botola Pro (Maroc), Ligue des Champions, ou matchs internationaux.
   
-  Pour chaque match, j'ai besoin de :
-  1. Nom exact des deux équipes
-  2. Nom de la ligue
-  3. Heure du match
-  4. Un lien URL vers le logo de l'équipe (utilise des URLs fiables comme celles de wikipedia ou de sites de sport connus).
+  Si c'est une date sans grands matchs, cherche des divisions inférieures ou des ligues d'autres pays (Brésil, USA, Asie).
   
-  Réponds UNIQUEMENT avec un tableau JSON suivant ce format exact :
+  Pour chaque match trouvé :
+  1. Noms exacts des deux équipes
+  2. Nom de la compétition
+  3. Heure précise (UTC)
+  4. URL d'un logo (cherche des URLs directes .png ou .jpg sur Wikipedia ou des sites de sport)
+  
+  Réponds UNIQUEMENT avec un tableau JSON (max 12 matchs) :
   [{
-    "id": "string_unique",
+    "id": "ai_unique_id",
     "league": "nom_ligue",
     "homeTeam": {"name": "nom", "logo": "url_logo"},
     "awayTeam": {"name": "nom", "logo": "url_logo"},
     "date": "ISO_DATE_STRING",
-    "odds": {"home": 2.0, "draw": 3.0, "away": 3.5},
+    "odds": {"home": 2.1, "draw": 3.2, "away": 3.4},
     "status": "upcoming",
-    "aiProbability": number_entre_60_et_90
+    "aiProbability": 75
   }]`;
 
   try {
@@ -33,14 +36,13 @@ export const searchRealMatchesViaAI = async (date: string): Promise<Match[]> => 
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.1,
+        temperature: 0.2,
         responseMimeType: "application/json"
       },
     });
 
     const rawText = response.text || "[]";
-    const jsonString = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const data = JSON.parse(jsonString);
+    const data = JSON.parse(rawText);
     
     return data.map((m: any) => ({
       ...m,
@@ -48,7 +50,7 @@ export const searchRealMatchesViaAI = async (date: string): Promise<Match[]> => 
       h2h: 'VS'
     })) as Match[];
   } catch (error) {
-    console.error("Gemini Match Search Failed:", error);
+    console.error("Échec de la recherche IA globale:", error);
     return [];
   }
 };
