@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [search, setSearch] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingStatus, setLoadingStatus] = useState<string>('');
   const [dataSource, setDataSource] = useState<'API' | 'AI_SEARCH' | 'MOCK'>('MOCK');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
@@ -44,12 +45,16 @@ const App: React.FC = () => {
 
   const loadData = async (showLoader = true) => {
     if (showLoader) setLoading(true);
+    setLoadingStatus("Initialisation des flux...");
     try {
-      const { matches: data, source } = await fetchMatchesByDate(selectedDate);
+      const { matches: data, source } = await fetchMatchesByDate(selectedDate, (status) => {
+        setLoadingStatus(status);
+      });
       setMatches(data);
       setDataSource(source);
     } catch (e) {
       console.error(e);
+      setLoadingStatus("Erreur fatale système.");
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -119,7 +124,7 @@ const App: React.FC = () => {
               <h1 className="text-xl font-black tracking-tight leading-none">PRONOS<span className="text-[#8b5cf6]">AI</span></h1>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`w-1.5 h-1.5 rounded-full ${dataSource === 'API' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{dataSource}</span>
+                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{dataSource === 'API' ? 'Live API Feed' : 'AI Synthetic Search'}</span>
               </div>
             </div>
           </div>
@@ -156,7 +161,7 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="px-10 py-8 flex items-center justify-between shrink-0 border-b border-white/5 bg-[#050507]/50 backdrop-blur-md">
           <div className="flex items-center gap-8">
-            <h2 className="text-2xl font-black tracking-tight">{t[activeTab as keyof typeof t] || t.pronos}</h2>
+            <h2 className="text-2xl font-black tracking-tight uppercase">{t[activeTab as keyof typeof t] || t.pronos}</h2>
             <div className="relative w-72">
               <input 
                 type="text" 
@@ -177,7 +182,7 @@ const App: React.FC = () => {
                 </div>
              )}
             <button onClick={() => loadData()} className="p-3 bg-[#0f0f12] rounded-2xl hover:text-[#8b5cf6] transition-colors border border-white/5">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             </button>
           </div>
         </header>
@@ -190,8 +195,11 @@ const App: React.FC = () => {
           {loading ? (
             <div className="h-full flex items-center justify-center">
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 border-2 border-[#8b5cf6]/20 border-t-[#8b5cf6] rounded-full animate-spin"></div>
-                <p className="mt-6 text-[11px] font-black text-zinc-600 uppercase tracking-[0.3em] animate-pulse">Recherche des matchs réels via IA...</p>
+                <div className="w-16 h-16 border-4 border-[#8b5cf6]/20 border-t-[#8b5cf6] rounded-full animate-spin"></div>
+                <div className="mt-8 flex flex-col items-center gap-2">
+                   <p className="text-[11px] font-black text-white uppercase tracking-[0.3em] animate-pulse">{loadingStatus}</p>
+                   <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Protocol Intelligence Terminal v2.5</p>
+                </div>
               </div>
             </div>
           ) : (
@@ -199,8 +207,11 @@ const App: React.FC = () => {
               {filteredMatches.length > 0 ? filteredMatches.map(match => (
                 <MatchCard key={match.id} match={match} onSelect={setSelectedMatch} onAddToSlip={addToSlip} lang={lang} />
               )) : (
-                <div className="col-span-full py-20 text-center text-zinc-600 font-bold uppercase tracking-widest">
-                  Aucun match trouvé pour cette date.
+                <div className="col-span-full py-20 text-center">
+                  <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6 text-zinc-800">
+                    <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  </div>
+                  <p className="text-zinc-600 font-black uppercase tracking-widest text-xs">Aucun match détecté pour cette période.</p>
                 </div>
               )}
             </div>
