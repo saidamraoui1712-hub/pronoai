@@ -1,68 +1,66 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Match, AIAnalysis } from "../types";
+import { Match, AIAnalysis, GroundingSource, LiveInsight } from "../types";
 
 export const getMatchAnalysis = async (match: Match): Promise<AIAnalysis> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const prompt = `Expert en football. Analyse de match de haute précision :
-  Affiche : ${match.homeTeam.name} vs ${match.awayTeam.name}
-  Ligue : ${match.league}
-  Cotes : ${JSON.stringify(match.odds)}
-  
-  Instructions critiques :
-  1. Catégorise le risque selon ces paliers : 
-     - 90%+: Safe (Grosse confiance)
-     - 70-89%: Moderate (Risque mesuré)
-     - 50-69%: Risky (Mise 5dh max)
-     - <50%: Extreme (Danger)
-  2. Analyse l'impact météo et les blessures majeures.
-  3. Propose une recommandation de type Over/Under ou Score Exact.
-  4. Réponse en JSON uniquement.`;
+  let prompt = "";
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          winProbabilities: {
-            type: Type.OBJECT,
-            properties: {
-              home: { type: Type.NUMBER },
-              draw: { type: Type.NUMBER },
-              away: { type: Type.NUMBER }
-            },
-            required: ["home", "draw", "away"]
-          },
-          expectedScore: { type: Type.STRING },
-          keyInsights: { type: Type.ARRAY, items: { type: Type.STRING } },
-          riskLevel: { type: Type.STRING },
-          suggestedBet: { type: Type.STRING },
-          confidenceScore: { type: Type.NUMBER },
-          absentPlayers: { type: Type.ARRAY, items: { type: Type.STRING } },
-          weatherImpact: { type: Type.STRING }
-        }
-      }
-    }
-  });
+  if (match.status === 'live' && match.liveStats) {
+    // Prompt spécifique pour le LIVE
+    prompt = `ANALYSE TACTIQUE EN DIRECT (Minute ${match.liveStats.minute}).
+    Affiche : ${match.homeTeam.name} vs ${match.awayTeam.name}.
+    Stats actuelles : Possession ${match.liveStats.possession.home}%-${match.liveStats.possession.away}%, 
+    Tirs Cadrés : ${match.liveStats.shotsOnTarget.home}-${match.liveStats.shotsOnTarget.away},
+    Attaques Dangereuses : ${match.liveStats.dangerousAttacks.home}-${match.liveStats.dangerousAttacks.away}.
+
+    Agis comme un scout pro. Analyse si un but est imminent ou si le match va se fermer (Under 2.5).
+    Réponds en JSON avec : winProbabilities, expectedScore, keyInsights, riskLevel, suggestedBet, confidenceScore, absentPlayers, et un nouveau champ "liveInsights" (liste d'objets avec minute, message, prediction, intensity).`;
+  } else {
+    // Prompt standard Avant-match
+    prompt = `Analyse en temps réel pour le match : ${match.homeTeam.name} vs ${match.awayTeam.name} (${match.league}).
+    Cotes actuelles : ${JSON.stringify(match.odds)}.
+    Vérifie les blessures de dernière minute, la météo et la forme.
+    Réponds en JSON avec : winProbabilities, expectedScore, keyInsights (3 points), riskLevel, suggestedBet, confidenceScore, absentPlayers.`;
+  }
 
   try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-preview",
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+      },
+    });
+
     const text = response.text || "{}";
-    const result = JSON.parse(text);
-    return { ...result, matchId: match.id } as AIAnalysis;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const sources: GroundingSource[] = groundingChunks?.map((chunk: any) => ({
+      title: chunk.web?.title || "Source",
+      uri: chunk.web?.uri || "#"
+    })).filter((s: any) => s.uri !== "#") || [];
+
+    return { 
+      ...result, 
+      matchId: match.id,
+      sources 
+    } as AIAnalysis;
   } catch (e) {
+    console.error("Gemini Analysis Error:", e);
     return {
       matchId: match.id,
-      winProbabilities: { home: 33, draw: 33, away: 34 },
+      winProbabilities: { home: 33, draw: 34, away: 33 },
       expectedScore: "1-1",
-      keyInsights: ["Données temporairement indisponibles"],
-      riskLevel: "Extreme",
-      suggestedBet: "No Bet",
+      keyInsights: ["Erreur de flux de données"],
+      riskLevel: "Inconnu",
+      suggestedBet: "Attendre",
       confidenceScore: 0,
-      absentPlayers: []
+      absentPlayers: [],
+      sources: []
     };
   }
 };

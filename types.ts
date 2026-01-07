@@ -10,6 +10,14 @@ export interface Team {
   avgGoalsConceded?: number;
 }
 
+export interface LiveStats {
+  possession: { home: number; away: number };
+  shotsOnTarget: { home: number; away: number };
+  dangerousAttacks: { home: number; away: number };
+  corners: { home: number; away: number };
+  minute: number;
+}
+
 export interface Match {
   id: string;
   sport: SportType;
@@ -24,8 +32,20 @@ export interface Match {
   };
   status: 'upcoming' | 'live' | 'finished';
   h2h?: string;
-  // Ajouté pour le filtrage par probabilité
   aiProbability?: number; 
+  liveStats?: LiveStats; // Nouvelles stats pour le direct
+}
+
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
+export interface LiveInsight {
+  minute: number;
+  message: string;
+  prediction: 'Goal_Soon_Home' | 'Goal_Soon_Away' | 'Stability' | 'Under_Alert' | 'Over_Alert';
+  intensity: number; // 0-100
 }
 
 export interface AIAnalysis {
@@ -37,11 +57,13 @@ export interface AIAnalysis {
   };
   expectedScore: string;
   keyInsights: string[];
-  riskLevel: 'Safe' | 'Moderate' | 'Risky' | 'Extreme';
+  riskLevel: string;
   suggestedBet: string;
   confidenceScore: number; 
   absentPlayers: string[];
   weatherImpact?: string;
+  sources?: GroundingSource[];
+  liveInsights?: LiveInsight[]; // Historique des prédictions live
 }
 
 export interface BetSlipItem {
@@ -52,7 +74,6 @@ export interface BetSlipItem {
   odds: number;
 }
 
-// Added UserNote interface to store personal analyst notes
 export interface UserNote {
   matchId: string;
   note: string;
