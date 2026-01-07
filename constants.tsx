@@ -34,26 +34,51 @@ export const MOCK_MATCHES: Match[] = [
     }
   },
   {
-    id: 'f1',
+    id: 'botola-1',
     sport: 'football',
-    league: 'Ligue 1 - France',
+    league: 'Botola Pro Inwi - Maroc',
     homeTeam: {
-      name: 'Paris SG',
-      logo: 'https://picsum.photos/seed/psg/64/64',
-      form: ['W', 'W', 'D', 'W', 'L'],
-      avgGoalsScored: 2.4,
-      avgGoalsConceded: 0.8
+      name: 'Raja Casablanca',
+      logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/93/Raja_Casablanca_logo.svg/1200px-Raja_Casablanca_logo.svg.png',
+      form: ['W', 'W', 'W', 'D', 'W'],
+      avgGoalsScored: 1.9,
+      avgGoalsConceded: 0.5
     },
     awayTeam: {
-      name: 'Marseille',
-      logo: 'https://picsum.photos/seed/om/64/64',
-      form: ['W', 'L', 'W', 'W', 'D'],
-      avgGoalsScored: 1.6,
+      name: 'Wydad Casablanca',
+      logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/03/Wydad_Athletic_Club_logo.svg/1200px-Wydad_Athletic_Club_logo.svg.png',
+      form: ['W', 'D', 'L', 'W', 'W'],
+      avgGoalsScored: 1.7,
+      avgGoalsConceded: 0.8
+    },
+    date: new Date().toISOString(),
+    odds: { home: 2.30, draw: 2.90, away: 3.10 },
+    status: 'upcoming',
+    h2h: 'RCA 0-0 WAC (Jan 2024)',
+    aiProbability: 82
+  },
+  {
+    id: 'pl-1',
+    sport: 'football',
+    league: 'Premier League - England',
+    homeTeam: {
+      name: 'Man City',
+      logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/1200px-Manchester_City_FC_badge.svg.png',
+      form: ['W', 'W', 'W', 'W', 'W'],
+      avgGoalsScored: 3.1,
+      avgGoalsConceded: 1.0
+    },
+    awayTeam: {
+      name: 'Liverpool',
+      logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/1200px-Liverpool_FC.svg.png',
+      form: ['W', 'W', 'D', 'W', 'W'],
+      avgGoalsScored: 2.4,
       avgGoalsConceded: 1.1
     },
-    date: '2024-05-20T21:00:00Z',
-    odds: { home: 1.45, draw: 4.80, away: 6.50 },
+    date: '2024-05-21T19:00:00Z',
+    odds: { home: 1.85, draw: 3.75, away: 4.20 },
     status: 'upcoming',
-    h2h: 'PSG 3-1 OM (Mars 2024)'
+    h2h: 'LIV 1-1 MCI (Mars 2024)',
+    aiProbability: 88
   }
 ];

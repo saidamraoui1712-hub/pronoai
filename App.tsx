@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [search, setSearch] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeLeague, setActiveLeague] = useState<string>('all');
   const [betSlip, setBetSlip] = useState<BetSlipItem[]>([]);
@@ -39,6 +40,7 @@ const App: React.FC = () => {
     try {
       const data = await fetchMatchesByDate(selectedDate);
       setMatches(data);
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (e) {
       console.error(e);
     } finally {
@@ -59,18 +61,33 @@ const App: React.FC = () => {
   };
 
   const filteredMatches = useMemo(() => {
-    let result = matches.filter(m => {
-      const matchSearch = m.homeTeam.name.toLowerCase().includes(search.toLowerCase()) || 
-                          m.awayTeam.name.toLowerCase().includes(search.toLowerCase());
-      const matchLeague = activeLeague === 'all' || m.league === activeLeague;
-      return matchSearch && matchLeague;
-    });
+    let result = [...matches];
+
+    if (search) {
+      result = result.filter(m => 
+        m.homeTeam.name.toLowerCase().includes(search.toLowerCase()) || 
+        m.awayTeam.name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    if (activeLeague !== 'all') {
+      result = result.filter(m => m.league === activeLeague);
+    }
 
     if (activeTab === 'analyses') {
       result = result.filter(m => (m.aiProbability || 0) >= 75);
     }
+
     if (activeTab === 'vip') {
-      result = result.filter(m => m.status === 'live' || (m.aiProbability || 0) >= 85);
+      const topLeagues = [
+        'Premier League', 'La Liga', 'Ligue 1', 'Serie A', 'Bundesliga', 
+        'Botola', 'Botola Pro', 'Botola Inwi', 'Morocco'
+      ];
+      result = result.filter(m => {
+        const isTopLeague = topLeagues.some(tl => m.league.toLowerCase().includes(tl.toLowerCase()));
+        const isHighConfidence = (m.aiProbability || 0) >= 70;
+        return isTopLeague && (isHighConfidence || m.status === 'live');
+      });
     }
 
     return result.sort((a, b) => (b.aiProbability || 0) - (a.aiProbability || 0));
@@ -78,7 +95,6 @@ const App: React.FC = () => {
 
   const uniqueLeagues = useMemo(() => Array.from(new Set(matches.map(m => m.league))).sort(), [matches]);
 
-  // FIX: Moved useMemo for calendar days out of JSX return to top level
   const calendarDays = useMemo(() => {
     const days = [];
     const today = new Date();
@@ -125,7 +141,7 @@ const App: React.FC = () => {
             ].map(nav => (
               <button
                 key={nav.id}
-                onClick={() => setActiveTab(nav.id)}
+                onClick={() => { setActiveTab(nav.id); setSearch(''); setActiveLeague('all'); }}
                 className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-sm font-bold transition-all group ${activeTab === nav.id ? 'active-tab shadow-lg shadow-emerald-500/5' : 'text-slate-400 hover:text-white hover:bg-slate-800/40'}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${activeTab === nav.id ? 'text-emerald-500' : 'text-slate-500 group-hover:text-slate-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">{nav.icon}</svg>
@@ -152,13 +168,24 @@ const App: React.FC = () => {
         <header className="glass border-b border-slate-800/60 px-8 py-6 flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 relative z-10">
           <div className="flex items-center gap-6 w-full md:w-auto">
             <h2 className="text-2xl font-black text-white uppercase tracking-tight">{t[activeTab as keyof typeof t] || t.pronos}</h2>
-            <div className="flex items-center gap-2.5 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{t.sync}</span>
+            <div className="flex flex-col gap-1">
+               <div className="flex items-center gap-2.5 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
+                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                 <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{t.sync}</span>
+               </div>
+               {lastUpdated && <span className="text-[9px] text-slate-500 font-bold uppercase text-center">MàJ: {lastUpdated}</span>}
             </div>
           </div>
 
           <div className="flex items-center gap-4 w-full md:w-auto">
+            <button 
+              onClick={loadData}
+              className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 hover:text-emerald-500 hover:border-emerald-500/50 transition-all active:rotate-180 duration-500"
+              title="Rafraîchir les scores"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            </button>
+
             <div className="relative flex-1 md:w-72">
               <input 
                 type="text" 
@@ -183,6 +210,22 @@ const App: React.FC = () => {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar bg-[radial-gradient(circle_at_0%_0%,rgba(16,185,129,0.02),transparent_40%)]">
+          {activeTab === 'vip' && (
+            <div className="mb-8 p-6 bg-emerald-600/10 border border-emerald-500/20 rounded-[2rem] animate-fade flex justify-between items-center">
+               <div>
+                  <h3 className="text-emerald-500 font-black uppercase text-sm mb-2 tracking-widest">Elite Selection (Top 5 + Botola)</h3>
+                  <p className="text-slate-400 text-xs font-medium leading-relaxed max-w-2xl">
+                    Focus exclusif sur les ligues majeures et la Botola Pro Inwi. Analyse synchronisée en temps réel.
+                  </p>
+               </div>
+               <div className="hidden md:block">
+                  <div className="w-12 h-12 rounded-full border-2 border-emerald-500/20 flex items-center justify-center">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
+                  </div>
+               </div>
+            </div>
+          )}
+
           {/* Calendar Selector */}
           <div className="flex gap-4 overflow-x-auto pb-10 no-scrollbar items-center">
             {calendarDays}

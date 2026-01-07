@@ -3,56 +3,63 @@ import { GoogleGenAI } from "@google/genai";
 import { Match, AIAnalysis, GroundingSource } from "../types";
 
 export const getMatchAnalysis = async (match: Match): Promise<AIAnalysis> => {
+  // Initialisation à chaque appel pour garantir l'utilisation de la clé la plus récente
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const isLive = match.status === 'live' && match.liveStats;
   
-  const systemInstruction = `Tu es un expert mondial en analyse de football. 
-  Réponds UNIQUEMENT en JSON pur, sans texte avant ou après. 
-  Si le match est en LIVE (Minute ${isLive ? match.liveStats?.minute : 'N/A'}), analyse le momentum actuel (possession, tirs) pour prédire si un but va arriver ou si le match sera Under 2.5.`;
+  // Utilisation de gemini-3-pro-preview pour les tâches complexes d'analyse
+  const modelName = 'gemini-3-pro-preview';
 
-  const prompt = isLive 
-    ? `ANALYSE LIVE: ${match.homeTeam.name} vs ${match.awayTeam.name}. 
-       Stats: Possession ${match.liveStats!.possession.home}%-${match.liveStats!.possession.away}%, 
-       Tirs cadrés ${match.liveStats!.shotsOnTarget.home}-${match.liveStats!.shotsOnTarget.away}.
-       Est-ce que Barca/Real va marquer bientôt ?`
-    : `ANALYSE PRE-MATCH: ${match.homeTeam.name} vs ${match.awayTeam.name} (${match.league}).
-       Forme: ${match.homeTeam.form.join(',')} vs ${match.awayTeam.form.join(',')}.`;
+  const systemInstruction = `Tu es un expert mondial en analyse de football et en data-journalisme sportif.
+  Ta mission est de fournir une analyse prédictive ultra-précise basée sur les statistiques actuelles, l'historique H2H et le momentum du match.
+  
+  RÈGLES CRITIQUES :
+  1. Réponds UNIQUEMENT avec un objet JSON valide.
+  2. N'ajoute AUCUN texte avant ou après le JSON.
+  3. Si le match est en LIVE, analyse spécifiquement les probabilités de "Prochain But" et "Over/Under" en fonction des tirs et de la possession.
+  4. Langue de réponse : Français.`;
 
-  const format = `
+  const prompt = `Analyse le match suivant :
+  LIGUE: ${match.league}
+  EQUIPES: ${match.homeTeam.name} vs ${match.awayTeam.name}
+  STATUS: ${match.status} ${isLive ? `(Minute: ${match.liveStats?.minute})` : ''}
+  COTES: Home ${match.odds.home}, Draw ${match.odds.draw}, Away ${match.odds.away}
+  ${isLive ? `STATS LIVE: Possession ${match.liveStats?.possession.home}%-${match.liveStats?.possession.away}%, Tirs ${match.liveStats?.shotsOnTarget.home}-${match.liveStats?.shotsOnTarget.away}` : `HISTORIQUE: ${match.h2h}`}
+
+  Génère une réponse suivant EXACTEMENT ce schéma :
   {
-    "winProbabilities": {"home": 45, "draw": 25, "away": 30},
-    "expectedScore": "2-1",
-    "keyInsights": ["Insight 1", "Insight 2", "Insight 3"],
-    "riskLevel": "Bas / Moyen / Haut",
-    "suggestedBet": "Victoire Equipe A ou Under 2.5",
-    "confidenceScore": 85,
-    "absentPlayers": ["Nom Joueur 1"],
-    "liveInsights": [{"minute": 25, "message": "Forte pression offensive", "prediction": "Goal_Soon_Home", "intensity": 80}]
+    "winProbabilities": {"home": number, "draw": number, "away": number},
+    "expectedScore": "string",
+    "keyInsights": ["string", "string", "string"],
+    "riskLevel": "Bas | Moyen | Haut",
+    "suggestedBet": "string",
+    "confidenceScore": number,
+    "absentPlayers": ["string"],
+    "liveInsights": [{"minute": number, "message": "string", "prediction": "Goal_Soon_Home | Goal_Soon_Away | Stability | Under_Alert | Over_Alert", "intensity": number}]
   }`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: `${prompt}\nStructure JSON:\n${format}` }] }],
+      model: modelName,
+      contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction,
         tools: [{ googleSearch: {} }],
-        temperature: 0.1,
+        temperature: 0.2, // Faible température pour plus de consistance
+        responseMimeType: "application/json"
       },
     });
 
     const rawText = response.text || "{}";
     
-    // Extraction robuste du bloc JSON
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found in response");
-    
-    const result = JSON.parse(jsonMatch[0]);
+    // Nettoyage du texte pour extraire le JSON proprement (au cas où le modèle ajoute des balises ```json)
+    const jsonString = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const result = JSON.parse(jsonString);
     
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     const sources: GroundingSource[] = groundingChunks?.map((chunk: any) => ({
-      title: chunk.web?.title || "Source Directe",
+      title: chunk.web?.title || "Analyse Web",
       uri: chunk.web?.uri || "#"
     })).filter((s: any) => s.uri !== "#") || [];
 
@@ -62,15 +69,15 @@ export const getMatchAnalysis = async (match: Match): Promise<AIAnalysis> => {
       sources 
     } as AIAnalysis;
   } catch (e) {
-    console.error("AI Analysis Error:", e);
-    // Fallback data if API fails or parsing fails
+    console.error("AI Analysis Failed:", e);
+    // Fallback structuré pour ne pas casser l'interface
     return {
       matchId: match.id,
       winProbabilities: { home: 33, draw: 34, away: 33 },
-      expectedScore: "1-1",
-      keyInsights: ["Données temporairement indisponibles", "Vérifiez votre connexion"],
-      riskLevel: "Inconnu",
-      suggestedBet: "Attendre le direct",
+      expectedScore: "N/A",
+      keyInsights: ["L'IA est actuellement surchargée ou en maintenance.", "Veuillez réessayer dans quelques instants."],
+      riskLevel: "Indéterminé",
+      suggestedBet: "Attendre confirmation",
       confidenceScore: 0,
       absentPlayers: [],
       sources: [],
