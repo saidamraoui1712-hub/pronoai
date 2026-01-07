@@ -2,6 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Match, AIAnalysis, GroundingSource } from "../types";
 
+// Service for complex match analysis using multiple Gemini models
 export const getMatchAnalysis = async (match: Match): Promise<AIAnalysis> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
@@ -53,11 +54,14 @@ export const getMatchAnalysis = async (match: Match): Promise<AIAnalysis> => {
         uri: chunk.web?.uri || "#"
       })).filter((s: any) => s.uri !== "#") || [];
 
+      // Map perspectives to standard interface fields for cross-component compatibility
       return { 
         ...result, 
         matchId: match.id,
         modelUsed: modelName,
-        sources 
+        sources,
+        technicalAnalysis: result.geminiPerspective || result.technicalAnalysis || "",
+        strategicAnalysis: result.chatGptPerspective || result.strategicAnalysis || ""
       } as AIAnalysis;
     } catch (e) {
       console.warn(`Modèle ${modelName} a échoué, tentative de fallback...`, e);
@@ -81,6 +85,8 @@ export const getMatchAnalysis = async (match: Match): Promise<AIAnalysis> => {
     expectedScore: "N/A",
     geminiPerspective: "Erreur de connexion aux serveurs de haute performance.",
     chatGptPerspective: "Impossible de générer la comparaison pour le moment.",
+    technicalAnalysis: "Erreur de connexion aux serveurs de haute performance.",
+    strategicAnalysis: "Impossible de générer la comparaison pour le moment.",
     keyInsights: ["Problème de quota API ou maintenance."],
     riskLevel: "Indéterminé",
     suggestedBet: "Attendre le rétablissement du service",
