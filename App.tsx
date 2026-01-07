@@ -13,11 +13,13 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<'fr' | 'ar'>('fr');
   const [activeTab, setActiveTab] = useState<'pronos' | 'leagues'>('pronos');
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [betSlip, setBetSlip] = useState<BetSlipItem[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<{match: Match, analysis: AIAnalysis} | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [lastSync, setLastSync] = useState<string>(new Date().toLocaleTimeString());
 
   const t = translations[lang];
   const API_SPORTS_KEY = "ffcbec0556b632dfa240569116630df0";
@@ -30,11 +32,34 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const loadMatches = async (date: string) => {
-    setLoading(true);
-    const data = await fetchRealMatches(date);
-    setMatches(data);
-    setLoading(false);
+  // Auto-refresh logic for AI predictions
+  useEffect(() => {
+    if (isAuth && activeTab === 'pronos') {
+      const intervalId = setInterval(() => {
+        refreshData();
+      }, 60000); // 60 seconds
+      return () => clearInterval(intervalId);
+    }
+  }, [isAuth, selectedDate, activeTab]);
+
+  const loadMatches = async (date: string, silent = false) => {
+    if (!silent) setLoading(true);
+    else setIsRefreshing(true);
+    
+    try {
+      const data = await fetchRealMatches(date);
+      setMatches(data);
+      setLastSync(new Date().toLocaleTimeString());
+    } catch (error) {
+      console.error("Failed to load matches", error);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const refreshData = () => {
+    loadMatches(selectedDate, true);
   };
 
   const handleDateChange = (date: string) => {
@@ -103,9 +128,11 @@ const App: React.FC = () => {
             {lang === 'fr' ? 'ARABIC' : 'FRANÇAIS'}
           </button>
           <div className="h-6 w-px bg-white/5"></div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
-            <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-            <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest">Quantum Engine v2.1</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-lg group relative cursor-help">
+            <span className={`w-2 h-2 ${isRefreshing ? 'bg-emerald-400 animate-spin' : 'bg-cyan-500 animate-pulse'} rounded-full`}></span>
+            <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest">
+              {isRefreshing ? 'Updating...' : `Sync: ${lastSync}`}
+            </span>
           </div>
         </div>
       </header>
@@ -116,23 +143,36 @@ const App: React.FC = () => {
           
           {activeTab === 'pronos' ? (
             <>
-              {/* Calendar Picker */}
-              <div className="flex gap-4 overflow-x-auto pb-8 no-scrollbar">
-                {[0, 1, 2, 3, 4, 5, 6].map(offset => {
-                  const d = new Date();
-                  d.setDate(d.getDate() + offset);
-                  const iso = d.toISOString().split('T')[0];
-                  return (
-                    <button
-                      key={iso}
-                      onClick={() => handleDateChange(iso)}
-                      className={`flex flex-col items-center min-w-[80px] py-4 rounded-2xl transition-all ${selectedDate === iso ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20 scale-105' : 'bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10'}`}
-                    >
-                      <span className="text-[10px] font-black uppercase mb-1">{d.toLocaleDateString(lang, { weekday: 'short' })}</span>
-                      <span className="text-xl font-black">{d.getDate()}</span>
-                    </button>
-                  );
-                })}
+              {/* Calendar Picker & Control */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+                  {[0, 1, 2, 3, 4, 5, 6].map(offset => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + offset);
+                    const iso = d.toISOString().split('T')[0];
+                    return (
+                      <button
+                        key={iso}
+                        onClick={() => handleDateChange(iso)}
+                        className={`flex flex-col items-center min-w-[80px] py-4 rounded-2xl transition-all ${selectedDate === iso ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20 scale-105' : 'bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <span className="text-[10px] font-black uppercase mb-1">{d.toLocaleDateString(lang, { weekday: 'short' })}</span>
+                        <span className="text-xl font-black">{d.getDate()}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button 
+                  onClick={refreshData}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-2 px-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all group"
+                >
+                  <svg className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-cyan-500' : 'group-hover:rotate-180 transition-transform duration-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {isRefreshing ? 'Syncing...' : 'Force Refresh'}
+                </button>
               </div>
 
               {loading ? (
@@ -164,7 +204,10 @@ const App: React.FC = () => {
           ) : (
             <div className="space-y-12">
                <div className="flex flex-col gap-2 mb-8">
-                  <h2 className="text-3xl font-black uppercase italic tracking-tighter">Exploration Mondiale</h2>
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-3xl font-black uppercase italic tracking-tighter">Exploration Mondiale</h2>
+                    <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[9px] font-black text-emerald-500 uppercase tracking-widest">Live Auto-Update (60s)</div>
+                  </div>
                   <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Naviguez parmi toutes les ligues via les données officielles API-SPORTS</p>
                </div>
                
@@ -181,6 +224,7 @@ const App: React.FC = () => {
                       type="games" 
                       apiKey={API_SPORTS_KEY} 
                       lang={lang}
+                      refresh="60"
                     />
                   </div>
                </div>

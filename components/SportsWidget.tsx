@@ -19,6 +19,7 @@ declare module 'react' {
         'data-league'?: string;
         'data-season'?: string;
         'data-show-toolbar'?: string;
+        'data-refresh'?: string;
       }, HTMLElement>;
     }
   }
@@ -32,6 +33,7 @@ interface SportsWidgetProps {
   sport?: string;
   lang?: string;
   target?: string;
+  refresh?: string;
 }
 
 export const SportsWidget: React.FC<SportsWidgetProps> = ({ 
@@ -41,7 +43,8 @@ export const SportsWidget: React.FC<SportsWidgetProps> = ({
   season, 
   sport = 'football', 
   lang = 'fr',
-  target = 'modal'
+  target = 'modal',
+  refresh
 }) => {
   return (
     <div className="w-full bg-[#0c0c0e] rounded-[2.5rem] border border-white/5 overflow-hidden animate-fade">
@@ -79,6 +82,7 @@ export const SportsWidget: React.FC<SportsWidgetProps> = ({
           data-type="games" 
           data-show-toolbar="true"
           data-target-game={target}
+          data-refresh={refresh}
         ></api-sports-widget>
       )}
     </div>
